@@ -31,10 +31,10 @@ valid_data = load_data('data/dev.json')
 
 tokenizer = BertTokenizerFast.from_pretrained('bert')
 
-with open('data/schemas.json', encoding='utf-8') as f:
+with open('data/relations.json', encoding='utf-8') as f:
     json_list = json.load(f)
     id2predicate = json_list[0]
-    predicate2id = json_list[1]
+    predicate2id = {item: index for index, item in id2predicate.items()}
 
 
 def search(pattern, sequence):
@@ -74,15 +74,15 @@ def data_generator(data, batch_size=3):
     batch_input_ids, batch_attention_mask = [], []
     batch_subject_labels, batch_subject_ids, batch_object_labels = [], [], []
     texts = []
-    for i, d in enumerate(data):
-        text = d['text']
+    for i, corpus in enumerate(data):
+        text = corpus['text']
 
         texts.append(text)
         encoding = tokenizer(text=text)
         input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
         # 整理三元组 {s: [(o, p)]}
         spoes = {}
-        for s, p, o in d['spo_list']:
+        for s, p, o in corpus['spo_list']:
             # cls x x x sep
             s_encoding = tokenizer(text=s).input_ids[1:-1]
             o_encoding = tokenizer(text=o).input_ids[1:-1]
@@ -95,9 +95,7 @@ def data_generator(data, batch_size=3):
             if s_idx != -1 and o_idx != -1:
                 s = (s_idx, s_idx + len(s_encoding) - 1)
                 o = (o_idx, o_idx + len(o_encoding) - 1, p)
-                if s not in spoes:
-                    spoes[s] = []
-                spoes[s].append(o)
+                spoes.setdefault(s, []).append(o)
         if spoes:
             # subject标签
             subject_labels = np.zeros((len(input_ids), 2))
@@ -105,7 +103,7 @@ def data_generator(data, batch_size=3):
                 # 注意要+1，因为有cls符号
                 subject_labels[s[0], 0] = 1
                 subject_labels[s[1], 1] = 1
-            # 一个s对应多个o时，随机选一个subject
+            # 有多个suject时，随机选一个subject
             start, end = np.array(list(spoes.keys())).T
             start = np.random.choice(start)
             # end = np.random.choice(end[end >= start])
@@ -129,12 +127,17 @@ def data_generator(data, batch_size=3):
                 batch_subject_ids = np.array(batch_subject_ids)
                 batch_object_labels = sequence_padding(batch_object_labels)
                 yield [
-                          torch.from_numpy(batch_input_ids).long(), torch.from_numpy(batch_attention_mask).long(),
-                          torch.from_numpy(batch_subject_labels), torch.from_numpy(batch_subject_ids),
-                          torch.from_numpy(batch_object_labels)
+                    torch.from_numpy(batch_input_ids).long(),
+                    torch.from_numpy(batch_attention_mask).long(),
+                    torch.from_numpy(batch_subject_labels),
+                    torch.from_numpy(batch_subject_ids),
+                    torch.from_numpy(batch_object_labels)
                       ]
-                batch_input_ids, batch_attention_mask = [], []
-                batch_subject_labels, batch_subject_ids, batch_object_labels = [], [], []
+                batch_input_ids, \
+                batch_attention_mask = [], []
+                batch_subject_labels, \
+                batch_subject_ids, \
+                batch_object_labels = [], [], []
 
 
 if os.path.exists('graph_model.bin'):
