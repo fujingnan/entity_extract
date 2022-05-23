@@ -4,6 +4,7 @@ import torch
 
 
 class SubjectModel(BertPreTrainedModel):
+
     def __init__(self, config):
         super().__init__(config)
         self.bert = BertModel(config)
@@ -12,6 +13,11 @@ class SubjectModel(BertPreTrainedModel):
     def forward(self,
                 input_ids,
                 attention_mask=None):
+        """
+        Arguments:
+            output: ([bs, seq_len, hidden_size], attention_probs)
+            subject_out: [bs, seq_len, 2]
+        """
         output = self.bert(input_ids, attention_mask=attention_mask)
         subject_out = self.dense(output[0])
         subject_out = torch.sigmoid(subject_out)
@@ -30,9 +36,17 @@ class ObjectModel(nn.Module):
                 input_ids,
                 subject_position,
                 attention_mask=None):
+        """
+        Arguments:
+            output: [bs, seq_len, hidden_size]
+            subject_out: [bs, seq_len, 2]
+            subject_position: [bs, 1, 768]
+            object_out: [bs, seq_len, 49, 2]
+        """
         output, subject_out = self.encoder(input_ids, attention_mask)
 
         subject_position = self.dense_subject_position(subject_position).unsqueeze(1)
+        # [bs, seq_len, hidden_size]
         object_out = output + subject_position
         # [bs, 768] -> [bs, 98]
         object_out = self.dense_object(object_out)

@@ -94,7 +94,7 @@ def data_generator(data, batch_size=3):
 
             if s_idx != -1 and o_idx != -1:
                 s = (s_idx, s_idx + len(s_encoding) - 1)
-                o = (o_idx, o_idx + len(o_encoding) - 1, p)
+                o = (o_idx, o_idx + len(o_encoding) - 1, int(p))
                 spoes.setdefault(s, []).append(o)
         if spoes:
             # subject标签
@@ -180,6 +180,16 @@ class SPO(tuple):
 
 
 def train_func():
+    """
+    Arguments:
+        input_ids: [8, 80]
+        attention_mask: [8, 80]
+        subject_ids: [8, 2]
+        subject_labels: [8, 80, 2]
+        subject_out: [8, 80, 2]
+        object_labels: [8, 80, 49, 2]
+        object_out: [8, 80, 49, 2]
+    """
     train_loss = 0
     pbar = tqdm(train_loader)
     for step, batch in enumerate(pbar):
@@ -208,7 +218,7 @@ def train_func():
         pbar.update()
         pbar.set_description(f'train loss:{loss.item()}')
 
-        if step % 1000 == 0 and step != 0:
+        if step % 10 == 0 and step != 0:
             torch.save(model, 'graph_model.bin')
             with torch.no_grad():
                 # texts = ['如何演好自己的角色，请读《演员自我修养》《喜剧之王》周星驰崛起于穷困潦倒之中的独门秘笈',
@@ -276,7 +286,7 @@ def train_func():
                 print('f1:', f1, 'precision:', precision, 'recall:', recall)
 
 
-for epoch in range(100):
+for epoch in range(1):
     print('************start train************')
     # 训练
     train_func()
