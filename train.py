@@ -221,9 +221,6 @@ def train_func():
         if step % 10 == 0 and step != 0:
             torch.save(model, 'graph_model.bin')
             with torch.no_grad():
-                # texts = ['如何演好自己的角色，请读《演员自我修养》《喜剧之王》周星驰崛起于穷困潦倒之中的独门秘笈',
-                #          '茶树茶网蝽，Stephanitis chinensis Drake，属半翅目网蝽科冠网椿属的一种昆虫',
-                #          '爱德华·尼科·埃尔南迪斯（1986-），是一位身高只有70公分哥伦比亚男子，体重10公斤，只比随身行李高一些，2010年获吉尼斯世界纪录正式认证，成为全球当今最矮的成年男人']
                 X, Y, Z = 1e-10, 1e-10, 1e-10
                 pbar = tqdm()
                 for data in valid_data[0:100]:
